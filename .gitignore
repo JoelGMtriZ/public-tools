@@ -1,0 +1,53 @@
+# Secrets & config
+.env
+*.env
+config.yaml
+config.json
+secrets/
+*_key.pem
+*.pem
+*.key
+
+# Target lists / scope files (these often contain client/program-sensitive info)
+targets.txt
+scope.txt
+domains.txt
+*_targets.*
+
+# Scan output & results (usually large, regenerable, sometimes sensitive)
+*.csv
+*.json.bak
+output/
+results/
+*.log
+resume_cache.json
+*_cache.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# OS / editor cruft
+.DS_Store
+.vscode/
+.idea/
+
+# --- Explicitly ensure scripts/code are always versioned ---
+# These negation rules guarantee source files are tracked even if a
+# broader pattern above would otherwise catch them (e.g. a script
+# named something like "scan_config.json" for logic, not secrets).
+!*.py
+!*.sh
+!*.go
+!*.rb
+!*.pl
+!*.ps1
+!*.js
+!*.md
+!README.md
+!requirements.txt
+!go.mod
+!go.sum
