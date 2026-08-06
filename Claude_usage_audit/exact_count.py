@@ -38,6 +38,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import chatexport
+
 API_URL = "https://api.anthropic.com/v1/messages/count_tokens"
 API_VERSION = "2023-06-01"
 DEFAULT_MODEL = "claude-sonnet-4-5"
@@ -123,47 +125,11 @@ def count_with_retry(text, model, api_key, max_attempts=6):
 # Extraction (mirrors claude_token_audit.py)
 # --------------------------------------------------------------------------
 
-def flatten(content):
-    if content is None:
-        return ""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, dict):
-        for key in ("text", "content", "input", "thinking"):
-            if key in content:
-                return flatten(content[key])
-        return json.dumps(content)
-    if isinstance(content, list):
-        return "\n".join(flatten(c) for c in content)
-    return str(content)
-
-
 def iter_messages(export_path):
-    """Yield (conversation_name, index, role, text) for every message."""
-    with open(export_path, "r", encoding="utf-8", errors="replace") as fh:
-        data = json.load(fh)
-    if isinstance(data, dict):
-        data = data.get("conversations") or data.get("data") or [data]
-
-    for conv in data:
-        if not isinstance(conv, dict):
-            continue
-        name = conv.get("name") or conv.get("title") or "(untitled)"
-        msgs = conv.get("chat_messages") or conv.get("messages") or []
-        if isinstance(msgs, dict):
-            msgs = list(msgs.values())
-        for i, msg in enumerate(msgs):
-            if not isinstance(msg, dict):
-                continue
-            if "message" in msg and isinstance(msg["message"], dict):
-                msg = msg["message"]
-            role = str(msg.get("sender") or msg.get("role") or "").lower()
-            text = flatten(msg.get("text") or msg.get("content")
-                           or msg.get("parts"))
-            for att in (msg.get("attachments") or []):
-                if isinstance(att, dict):
-                    text += flatten(att.get("extracted_content"))
-            yield name, i, role, text
+    """Yield (conv_key, conv_name, index, role, text) for every message."""
+    for key, name, _conv, turns in chatexport.load(export_path):
+        for index, role, text, _attach_chars in turns:
+            yield key, name, index, role, text
 
 
 # --------------------------------------------------------------------------
@@ -177,7 +143,7 @@ def run(export_path, model, api_key, cache_path=CACHE_PATH, limit=None):
         messages = messages[:limit]
 
     unique = {}
-    for _, _, _, text in messages:
+    for _, _, _, _, text in messages:
         if len(text) >= MIN_COUNTABLE:
             unique[content_hash(text, model)] = text
 
@@ -217,15 +183,18 @@ def run(export_path, model, api_key, cache_path=CACHE_PATH, limit=None):
     # Emit the sidecar the analyzer reads.
     lookup = {row[0]: row[1] for row in db.execute("SELECT hash, tokens FROM counts")}
     out = {}
-    for name, idx, role, text in messages:
+    hits = 0
+    for key, _name, idx, _role, text in messages:
         h = content_hash(text, model)
+        bucket = out.setdefault(key, {})
         if h in lookup:
-            out.setdefault(name, {})[str(idx)] = {"role": role,
-                                                  "tokens": lookup[h]}
+            bucket[str(idx)] = lookup[h]
+            hits += 1
 
-    sidecar = Path(export_path).with_suffix(".tokens.json")
-    sidecar.write_text(json.dumps({"model": model, "counts": out}), "utf-8")
+    sidecar = chatexport.write_sidecar(export_path, model, out)
     print(f"  wrote {sidecar}")
+    print(f"  coverage: {hits:,}/{len(messages):,} messages "
+          f"({hits / max(len(messages), 1) * 100:.1f}%)")
 
     rows = list(db.execute("SELECT tokens, chars FROM counts WHERE chars > 0"))
     if rows:
@@ -245,14 +214,14 @@ def calibrate(export_path, model, api_key, sample=20):
     report should say so.
     """
     by_conv = {}
-    for name, idx, role, text in iter_messages(export_path):
-        by_conv.setdefault(name, []).append((role, text))
+    for key, name, _idx, role, text in iter_messages(export_path):
+        by_conv.setdefault((key, name), []).append((role, text))
 
     picks = sorted(by_conv.items(), key=lambda kv: -len(kv[1]))[:sample]
     print(f"  calibrating on {len(picks)} conversations\n")
     drifts = []
 
-    for name, turns in picks:
+    for (_key, name), turns in picks:
         parts = 0
         for _, text in turns:
             if len(text) >= MIN_COUNTABLE:
