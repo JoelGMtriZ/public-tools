@@ -7,7 +7,6 @@ secrets/
 *_key.pem
 *.pem
 *.key
-CLAUDE.md
 
 # Target lists / scope files (these often contain client/program-sensitive info)
 targets.txt
@@ -52,3 +51,16 @@ venv/
 !requirements.txt
 !go.mod
 !go.sum
+
+# --- Private / user data: keep LAST so the negations above can't re-include ---
+# Personal context docs (kept locally, never published)
+CLAUDE.md
+**/CLAUDE.md
+Claude_usage_audit/PROJECT.md
+
+# Claude usage audit: chat exports, token sidecars and generated reports all
+# contain conversation titles or content
+conversations*.json
+*.tokens.json
+claude_token_audit*.html
+Claude_usage_audit/**/*.html

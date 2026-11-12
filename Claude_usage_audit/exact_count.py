@@ -63,8 +63,32 @@ def open_cache(path=CACHE_PATH):
                     tokens INTEGER NOT NULL,
                     chars INTEGER NOT NULL,
                     created REAL NOT NULL)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS overhead (
+                    model TEXT PRIMARY KEY,
+                    tokens INTEGER NOT NULL)""")
     db.commit()
     return db
+
+
+def request_overhead(db, model, api_key):
+    """Fixed tokens count_tokens adds to every request (role/turn framing).
+
+    Each message is counted as its own one-message request, so every raw
+    count includes this framing once. Without subtracting it, short messages
+    are inflated and totals drift upward with message count. Measured once
+    per model by counting a one-character message, then cached.
+    """
+    row = db.execute("SELECT tokens FROM overhead WHERE model = ?",
+                     (model,)).fetchone()
+    if row:
+        return row[0]
+    if not api_key:
+        return None
+    raw = count_with_retry("a", model, api_key)
+    overhead = max(raw - 1, 0)  # "a" itself is one token
+    db.execute("INSERT OR REPLACE INTO overhead VALUES (?, ?)", (model, overhead))
+    db.commit()
+    return overhead
 
 
 def content_hash(text, model):
@@ -77,6 +101,10 @@ def content_hash(text, model):
 
 class RateLimited(Exception):
     pass
+
+
+class AuthError(Exception):
+    """401/403: the key is wrong or lacks access. Retrying cannot help."""
 
 
 def count_remote(text, model, api_key, timeout=30):
@@ -98,6 +126,8 @@ def count_remote(text, model, api_key, timeout=30):
         if exc.code == 429:
             raise RateLimited(exc.headers.get("retry-after", "5"))
         body = exc.read().decode("utf-8", "replace")[:200]
+        if exc.code in (401, 403):
+            raise AuthError(f"HTTP {exc.code}: {body}") from exc
         raise RuntimeError(f"HTTP {exc.code}: {body}") from exc
 
 
@@ -162,33 +192,49 @@ def run(export_path, model, api_key, cache_path=CACHE_PATH, limit=None):
               file=sys.stderr)
         return None
 
+    overhead = request_overhead(db, model, api_key)
+    if overhead is None:
+        overhead = 0
+        print("  ! request overhead not measured yet (needs ANTHROPIC_API_KEY "
+              "once); counts include a few framing tokens per message",
+              file=sys.stderr)
+
     start = time.time()
-    for n, (h, text) in enumerate(todo, 1):
-        try:
-            tokens = count_with_retry(text, model, api_key)
-        except Exception as exc:  # noqa: BLE001 - keep going, log the miss
-            print(f"\n  ! {h[:8]}: {exc}", file=sys.stderr)
-            continue
-        db.execute("INSERT OR REPLACE INTO counts VALUES (?,?,?,?,?)",
-                   (h, model, tokens, len(text), time.time()))
-        if n % 25 == 0:
-            db.commit()
-            rate = n / max(time.time() - start, 0.001)
-            eta = (len(todo) - n) / max(rate, 0.001)
-            print(f"\r  counted {n:,}/{len(todo):,}  "
-                  f"{rate:.1f}/s  eta {eta / 60:.1f}m", end="", flush=True)
-    db.commit()
+    try:
+        for n, (h, text) in enumerate(todo, 1):
+            try:
+                tokens = count_with_retry(text, model, api_key)
+            except AuthError:
+                raise
+            except Exception as exc:  # noqa: BLE001 - keep going, log the miss
+                print(f"\n  ! {h[:8]}: {exc}", file=sys.stderr)
+                continue
+            db.execute("INSERT OR REPLACE INTO counts VALUES (?,?,?,?,?)",
+                       (h, model, tokens, len(text), time.time()))
+            if n % 25 == 0:
+                db.commit()
+                rate = n / max(time.time() - start, 0.001)
+                eta = (len(todo) - n) / max(rate, 0.001)
+                print(f"\r  counted {n:,}/{len(todo):,}  "
+                      f"{rate:.1f}/s  eta {eta / 60:.1f}m", end="", flush=True)
+    finally:
+        db.commit()  # keep whatever was counted, even if we stop early
     print()
 
-    # Emit the sidecar the analyzer reads.
+    # Emit the sidecar the analyzer reads. The cache stores raw counts; the
+    # per-request framing is subtracted here so it can be re-measured later.
     lookup = {row[0]: row[1] for row in db.execute("SELECT hash, tokens FROM counts")}
     out = {}
     hits = 0
     for key, _name, idx, _role, text in messages:
-        h = content_hash(text, model)
         bucket = out.setdefault(key, {})
+        if len(text) < MIN_COUNTABLE:
+            bucket[str(idx)] = 0  # empty message: exactly zero, no call needed
+            hits += 1
+            continue
+        h = content_hash(text, model)
         if h in lookup:
-            bucket[str(idx)] = lookup[h]
+            bucket[str(idx)] = max(lookup[h] - overhead, 1)
             hits += 1
 
     sidecar = chatexport.write_sidecar(export_path, model, out)
@@ -196,9 +242,11 @@ def run(export_path, model, api_key, cache_path=CACHE_PATH, limit=None):
     print(f"  coverage: {hits:,}/{len(messages):,} messages "
           f"({hits / max(len(messages), 1) * 100:.1f}%)")
 
-    rows = list(db.execute("SELECT tokens, chars FROM counts WHERE chars > 0"))
+    rows = list(db.execute("SELECT tokens, chars FROM counts "
+                           "WHERE chars > 0 AND model = ?", (model,)))
     if rows:
-        ratio = sum(c for _, c in rows) / sum(t for t, _ in rows)
+        ratio = (sum(c for _, c in rows)
+                 / sum(max(t - overhead, 1) for t, _ in rows))
         print(f"  measured ratio: {ratio:.2f} chars/token "
               f"across {len(rows):,} messages")
         print("  (update CHARS_PER_TOKEN in claude_token_audit.py to match "
@@ -206,7 +254,7 @@ def run(export_path, model, api_key, cache_path=CACHE_PATH, limit=None):
     return sidecar
 
 
-def calibrate(export_path, model, api_key, sample=20):
+def calibrate(export_path, model, api_key, sample=20, cache_path=CACHE_PATH):
     """Measure additivity drift: sum-of-parts vs. count-of-whole.
 
     This is the honesty check. If summing per-message counts diverges badly
@@ -218,14 +266,16 @@ def calibrate(export_path, model, api_key, sample=20):
         by_conv.setdefault((key, name), []).append((role, text))
 
     picks = sorted(by_conv.items(), key=lambda kv: -len(kv[1]))[:sample]
-    print(f"  calibrating on {len(picks)} conversations\n")
+    overhead = request_overhead(open_cache(cache_path), model, api_key) or 0
+    print(f"  calibrating on {len(picks)} conversations "
+          f"(request overhead: {overhead} tokens)\n")
     drifts = []
 
     for (_key, name), turns in picks:
         parts = 0
         for _, text in turns:
             if len(text) >= MIN_COUNTABLE:
-                parts += count_with_retry(text, model, api_key)
+                parts += max(count_with_retry(text, model, api_key) - overhead, 1)
 
         merged = []
         for role, text in turns:
@@ -244,7 +294,13 @@ def calibrate(export_path, model, api_key, sample=20):
                      "anthropic-version": API_VERSION, "x-api-key": api_key})
         try:
             with urllib.request.urlopen(req, timeout=60) as resp:
-                whole = int(json.loads(resp.read())["input_tokens"])
+                # The whole conversation is one request: framing paid once.
+                whole = int(json.loads(resp.read())["input_tokens"]) - overhead
+        except urllib.error.HTTPError as exc:
+            if exc.code in (401, 403):
+                raise AuthError(f"HTTP {exc.code}") from exc
+            print(f"  ! {name[:40]}: {exc}")
+            continue
         except Exception as exc:  # noqa: BLE001
             print(f"  ! {name[:40]}: {exc}")
             continue
@@ -276,12 +332,17 @@ def main():
 
     api_key = os.environ.get("ANTHROPIC_API_KEY", "")
 
-    if args.calibrate:
-        if not api_key:
-            sys.exit("ANTHROPIC_API_KEY required for calibration")
-        calibrate(args.export, args.model, api_key, args.calibrate)
-    else:
-        run(args.export, args.model, api_key, args.cache, args.limit)
+    try:
+        if args.calibrate:
+            if not api_key:
+                sys.exit("ANTHROPIC_API_KEY required for calibration")
+            calibrate(args.export, args.model, api_key, args.calibrate,
+                      args.cache)
+        else:
+            run(args.export, args.model, api_key, args.cache, args.limit)
+    except AuthError as exc:
+        sys.exit(f"\n  ! API key rejected ({exc}). Check ANTHROPIC_API_KEY; "
+                 "anything counted before this was saved to the cache.")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# Quickstart — Pro subscription
+# Quickstart — personal Pro/Max account
 
 Runbook for your first audit. Roughly 20 minutes of work, most of it waiting
 for an email.
@@ -7,14 +7,18 @@ for an email.
 
 ## Before you start
 
-Three files, all in one folder. They import each other, so don't split them up.
+Four files, all in one folder. They import each other, so don't split them up.
 
 ```
 ~/token-audit/
+  analysis.py
   chatexport.py
   claude_token_audit.py
   exact_count.py
 ```
+
+If you cloned the repo instead, keep your export and reports **outside** the
+repo folder so they can't be committed by accident.
 
 Python 3.9 or newer. Nothing to install — standard library only.
 
@@ -26,7 +30,7 @@ python3 --version
 
 ## Stage 1 — Get the export
 
-1. Open **claude.ai in a browser** on your personal Pro account.
+1. Open **claude.ai in a browser** on your personal account.
    Not the phone app; export isn't available there.
 2. Click your initials, bottom left → **Settings** → **Privacy**
 3. Click **Export data**
@@ -51,7 +55,9 @@ print('sample:', d[0].get('name') or '(untitled)')
 "
 ```
 
-If `has uuid` prints `False`, stop and say so — the merge logic depends on it.
+If `has uuid` prints `False`, the export format has changed. The report will
+still run, but exact counts won't carry over between exports. Please open an
+issue with the top-level key names (not the contents).
 
 ---
 
@@ -65,6 +71,9 @@ open claude_token_audit.html          # macOS
 ```
 
 Nothing leaves your machine. No account, no key, no network.
+
+The report includes your conversation titles and short message snippets, so
+look it over before sharing it with anyone.
 
 ### Reading it
 
@@ -94,10 +103,15 @@ front of your team. Especially relevant for script-heavy chats: code tokenizes
 very differently from prose, so character estimation drifts most exactly where
 your usage is heaviest.
 
+> **Privacy:** this stage sends the text of each message to Anthropic's
+> `count_tokens` API to be counted. Only the token counts are stored locally;
+> no message text is cached. Skip this stage if you'd rather nothing leave
+> your machine.
+
 ### Get a key
 
-The Console is a **separate account** from your Pro login. Pro includes no API
-access.
+The Console is a **separate account** from your claude.ai login. Pro and Max
+plans include no API access.
 
 1. Sign up at **console.anthropic.com**
 2. Verify by SMS. No card needed. VoIP and Google Voice numbers are rejected.
@@ -117,8 +131,8 @@ activate it and you don't need it for this.
 python3 exact_count.py conversations.json --limit 50
 ```
 
-Expect: a count of messages found, then progress. If you see `HTTP 401`, the
-key is wrong. If it crawls, that's rate limiting on an unfunded account, not a
+Expect: a count of messages found, then progress. If it stops with
+"API key rejected", the key is wrong. If it crawls, that's rate limiting on an unfunded account, not a
 bug — the script backs off and retries on its own.
 
 ### Validate the math
@@ -130,12 +144,13 @@ python3 exact_count.py conversations.json --calibrate 10
 This checks an assumption the tool makes: it counts each message once and adds
 them up, rather than re-counting the whole thread at every turn (which would be
 hundreds of times more API calls). Tokenization isn't perfectly additive, so
-this measures the error on *your* data instead of asking you to trust a number
-I picked.
+this measures the error on *your* data instead of asking you to trust a fixed
+constant.
 
 - **drift under 2%** — good, carry on
 - **2–5%** — usable, treat totals as approximate
-- **over 5%** — tell me, the shortcut needs rethinking
+- **over 5%** — the shortcut doesn't fit your data well; please open an issue
+  with the drift figures (no conversation content needed)
 
 ### Full run
 
@@ -162,8 +177,8 @@ percentages in the report show you exactly what was reused.
 
 ## Troubleshooting
 
-**`ModuleNotFoundError: chatexport`**
-All three files must be in the same folder, and you must run from that folder.
+**`ModuleNotFoundError: chatexport`** (or `analysis`)
+All four files must be in the same folder, and you must run from that folder.
 
 **Report says "estimated" after running exact_count**
 The `.tokens.json` sidecar has to sit beside the export with a matching name.
@@ -179,7 +194,7 @@ only the failures retry.
 
 **Report is empty**
 The export layout may differ from what the reader expects. Check the sanity
-snippet in Stage 1 and share the top-level key names.
+snippet in Stage 1 and open an issue with the top-level key names.
 
 ---
 

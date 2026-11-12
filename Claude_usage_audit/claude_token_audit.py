@@ -42,22 +42,39 @@ import analysis
 
 CHARS_PER_TOKEN = 3.8  # English + code mix. Pure code trends lower (~3.2).
 
-# USD per million tokens. Verify against current pricing before trusting the
-# dollar figures; these are here so the relative ranking is meaningful.
-PRICE_PER_MTOK = {
-    "opus":   {"in": 15.00, "out": 75.00, "cache_write": 18.75, "cache_read": 1.50},
-    "sonnet": {"in":  3.00, "out": 15.00, "cache_write":  3.75, "cache_read": 0.30},
-    "haiku":  {"in":  0.80, "out":  4.00, "cache_write":  1.00, "cache_read": 0.08},
-}
-DEFAULT_FAMILY = "sonnet"
+# USD per million tokens, from https://platform.claude.com/docs/en/about-claude/pricing
+# (checked 2026-11-12). Prices differ between versions of the same family, so
+# rows are matched against the model ID in order, most specific first.
+# cache_write is the 5-minute rate. Haiku 5.5 uses its <=100K-token-prompt rate.
+# Verify against current pricing before trusting the dollar figures.
+PRICING_CHECKED = "2026-11-12"
+PRICE_TABLE = [
+    # (model-ID regex,               in,     out,  c_write, c_read)
+    (r"(fable|mythos)-5-2(?!\d)",       8.00,  40.00,  10.00,   0.20),
+    (r"(fable|mythos)-5-1(?!\d)",      10.00,  50.00,  12.50,   0.25),
+    (r"(fable|mythos)-5(?!\d)",        10.00,  50.00,  12.50,   1.00),
+    (r"opus-5-5(?!\d)",                 4.00,  20.00,   5.00,   0.20),
+    (r"opus-(5|4-[5-9])(?!\d)",         5.00,  25.00,   6.25,   0.50),
+    (r"opus",                          15.00,  75.00,  18.75,   1.50),  # 4.1 and older
+    (r"sonnet-5-5(?!\d)",               2.00,  10.00,   2.50,   0.10),
+    (r"sonnet-5(?!\d)",                 2.00,  10.00,   2.50,   0.20),
+    (r"sonnet",                         3.00,  15.00,   3.75,   0.30),  # 4.6 and older
+    (r"haiku-5-5(?!\d)",                0.10,   0.50,  0.125,   0.01),
+    (r"haiku-4-5(?!\d)",                1.00,   5.00,   1.25,   0.10),
+    (r"3-5-haiku|haiku-3-5",            0.80,   4.00,   1.00,   0.08),
+    (r"haiku",                          0.25,   1.25,   0.30,   0.03),  # Haiku 3
+]
+DEFAULT_MODEL_FOR_PRICING = "sonnet-5-5"
 
 
-def family_of(model_name):
+def rates_for(model_name):
+    """Per-MTok rates for a model ID; unknown IDs fall back to the default."""
     m = (model_name or "").lower()
-    for fam in ("opus", "sonnet", "haiku"):
-        if fam in m:
-            return fam
-    return DEFAULT_FAMILY
+    for pattern, p_in, p_out, p_cw, p_cr in PRICE_TABLE:
+        if re.search(pattern, m):
+            return {"in": p_in, "out": p_out,
+                    "cache_write": p_cw, "cache_read": p_cr}
+    return rates_for(DEFAULT_MODEL_FOR_PRICING)
 
 
 def est_tokens(text):
@@ -88,22 +105,6 @@ def parse_ts(value):
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt
-
-
-def flatten_content(content):
-    """Pull plain text out of the several shapes message content can take."""
-    if content is None:
-        return ""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, dict):
-        for key in ("text", "content", "input", "thinking"):
-            if key in content:
-                return flatten_content(content[key])
-        return json.dumps(content)
-    if isinstance(content, list):
-        return "\n".join(flatten_content(c) for c in content)
-    return str(content)
 
 
 # --------------------------------------------------------------------------
@@ -200,18 +201,18 @@ def blank_bucket():
             "calls": 0, "models": defaultdict(int)}
 
 
-def find_usage(obj):
-    """Depth-first search for usage dicts; log schemas shift between versions."""
-    found = []
-    if isinstance(obj, dict):
-        if any(k in obj for k in USAGE_KEYS):
-            found.append(obj)
-        for value in obj.values():
-            found.extend(find_usage(value))
-    elif isinstance(obj, list):
-        for item in obj:
-            found.extend(find_usage(item))
-    return found
+def record_usage(rec, msg):
+    """The usage dict for one log record, or None.
+
+    Only the API response's own usage counts: message.usage, or a top-level
+    usage on older log versions. Nested usage (e.g. a subagent's totals echoed
+    inside a tool result) is deliberately ignored -- subagent calls are logged
+    in their own records, so counting the echo would double them.
+    """
+    for candidate in ((msg or {}).get("usage"), rec.get("usage")):
+        if isinstance(candidate, dict) and any(k in candidate for k in USAGE_KEYS):
+            return candidate
+    return None
 
 
 def analyze_code_logs(root):
@@ -224,6 +225,11 @@ def analyze_code_logs(root):
     models = defaultdict(blank_bucket)
     tools = defaultdict(int)
     skipped = 0
+    duplicates = 0
+    # Claude Code writes one log line per content block of a response, and
+    # every line repeats that response's usage. Count each response once,
+    # keyed by (message.id, requestId).
+    seen = set()
 
     for fp in files:
         project = fp.parent.name
@@ -243,18 +249,38 @@ def analyze_code_logs(root):
                     skipped += 1
                     continue
 
-                for name in re.findall(r'"name"\s*:\s*"(\w+)"', line):
-                    if name in ("Bash", "Read", "Edit", "Write", "Grep",
-                                "Glob", "Task", "WebFetch", "WebSearch"):
-                        tools[name] += 1
+                if not isinstance(rec, dict):
+                    continue
+                msg = rec.get("message")
+                msg = msg if isinstance(msg, dict) else None
 
-                msg = rec.get("message") if isinstance(rec, dict) else None
-                model = (msg or {}).get("model") if isinstance(msg, dict) else None
-                model = model or (rec.get("model") if isinstance(rec, dict) else None)
-                day = parse_ts((rec or {}).get("timestamp"))
+                # Tool calls: tool_use blocks in the assistant's own content,
+                # not any "name" key that happens to appear in the line.
+                content = (msg or {}).get("content")
+                if isinstance(content, list):
+                    for block in content:
+                        if (isinstance(block, dict)
+                                and block.get("type") == "tool_use"
+                                and block.get("name")):
+                            tools[str(block["name"])] += 1
+
+                model = (msg or {}).get("model") or rec.get("model")
+                day = parse_ts(rec.get("timestamp"))
                 day_key = day.strftime("%Y-%m-%d") if day else "unknown"
 
-                for usage in find_usage(rec):
+                usage = record_usage(rec, msg)
+                if usage:
+                    msg_id = (msg or {}).get("id")
+                    req_id = rec.get("requestId")
+                    if msg_id or req_id:
+                        dedup_key = (msg_id, req_id)
+                        if dedup_key in seen:
+                            duplicates += 1
+                            usage = None
+                        else:
+                            seen.add(dedup_key)
+
+                if usage:
                     counts = {v: int(usage.get(k) or 0)
                               for k, v in USAGE_KEYS.items()}
                     if not any(counts.values()):
@@ -272,14 +298,14 @@ def analyze_code_logs(root):
 
     return {"sessions": dict(sessions), "projects": dict(projects),
             "daily": dict(daily), "models": dict(models),
-            "tools": dict(tools), "files": len(files), "skipped": skipped}
+            "tools": dict(tools), "files": len(files), "skipped": skipped,
+            "duplicates": duplicates}
 
 
 def cost_of(bucket, model_hint=None):
-    fam = family_of(model_hint or
-                    (max(bucket["models"], key=bucket["models"].get)
-                     if bucket.get("models") else None))
-    p = PRICE_PER_MTOK[fam]
+    p = rates_for(model_hint or
+                  (max(bucket["models"], key=bucket["models"].get)
+                   if bucket.get("models") else None))
     return (bucket["in"] * p["in"]
             + bucket["out"] * p["out"]
             + bucket["cache_write"] * p["cache_write"]
@@ -733,13 +759,17 @@ def build_report(chat, code, out_path):
                 tot[k] += bucket[k]
         grand = tot["in"] + tot["out"] + tot["cache_write"] + tot["cache_read"]
         cached = tot["cache_read"] / max(tot["cache_read"] + tot["in"], 1) * 100
-        cost = sum(cost_of(b) for b in code["models"].values())
+        cost = sum(cost_of(b, k) for k, b in code["models"].items())
 
         h.append("<h2>Claude Code &mdash; measured</h2>")
+        dup_note = (f" {code['duplicates']:,} repeated log lines for the same "
+                    "response were counted once." if code.get("duplicates")
+                    else "")
         h.append(f"<div class='note'>Real token counts from "
-                 f"{code['files']} session log(s). Dollar figures use the "
-                 f"rate table at the top of the script &mdash; check it "
-                 f"against current pricing.</div>")
+                 f"{code['files']} session log(s).{dup_note} Dollar figures "
+                 f"are API-equivalent list prices from the rate table at the "
+                 f"top of the script (checked {PRICING_CHECKED}) &mdash; not "
+                 f"what a subscription plan bills.</div>")
         h.append("<div class='cards'>"
                  f"<div class='card'><b>{grand / 1e6:,.1f}M</b>"
                  "<span>total tokens</span></div>"

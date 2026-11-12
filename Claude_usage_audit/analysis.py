@@ -8,7 +8,7 @@ times each early message was re-paid, where a conversation should have been
 split, when the running context crossed an expensive threshold, how much of the
 cost was attachments, and which conversations were anomalous spikes.
 
-NON-NEGOTIABLES (see PROJECT.md)
+NON-NEGOTIABLES (see README.md)
   1. No LLM in the analysis path. Arithmetic and thresholds only.
   3. Never present an estimate as a measurement. Every finding carries the
      provenance (coverage) of the conversation it came from, and attachment

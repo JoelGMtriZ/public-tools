@@ -13,7 +13,8 @@ Keep all three files in the same directory.
 import json
 from pathlib import Path
 
-SCHEMA = 2  # bump when keys or text extraction change; invalidates sidecars
+SCHEMA = 3  # bump when keys, text extraction or count semantics change
+            # (3: per-request overhead subtracted, empty messages = 0)
 
 
 def flatten(content):
