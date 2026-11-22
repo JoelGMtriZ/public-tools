@@ -64,3 +64,13 @@ conversations*.json
 *.tokens.json
 claude_token_audit*.html
 Claude_usage_audit/**/*.html
+
+# Bastion: runtime stores, loot, keys and real scan output (keep samples/examples)
+bastion.sqlite*
+bastion/**/bastion.sqlite*
+keys.env
+bastion/**/*.ndjson
+bastion/**/*_report.html
+!bastion/sample.ndjson
+!bastion/sample_report.html
+!bastion/sample.json

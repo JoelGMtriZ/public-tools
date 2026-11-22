@@ -1,0 +1,616 @@
+{
+  "target": "acme-example.com",
+  "knowledge": "grey",
+  "mode": "active",
+  "generated_at": "2026-11-22T04:05:47.030322+00:00",
+  "sources": [
+    "crtsh",
+    "shodan"
+  ],
+  "headline": "14 leads across 9 zones; 3 confirmed. Best: Redis exposed (RCE/Likely).",
+  "stats": {
+    "host": 4,
+    "ip": 3,
+    "service": 7,
+    "endpoint": 2,
+    "live_hosts": 3,
+    "corroborated": 2
+  },
+  "impact_tally": {
+    "RCE": 1,
+    "Takeover": 1,
+    "Creds": 1,
+    "Foothold": 4,
+    "Data": 4,
+    "Recon": 3
+  },
+  "avenues": [
+    {
+      "name": "Source disclosure via exposed .git",
+      "entry_zone": "postern",
+      "objective": "Creds",
+      "score": 18.5,
+      "llm_written": true,
+      "narrative": "dev-admin leaks .git/config \u2014 pull the repo, mine history for secrets, then pivot to the origin's Redis.",
+      "leads": [
+        "postern|http://dev-admin.acme-example.com/.git/config|Exposed .git/config",
+        "garrison|198.51.100.7:6379/tcp|Redis exposed"
+      ]
+    },
+    {
+      "name": "Garrison approach",
+      "entry_zone": "garrison",
+      "objective": "RCE",
+      "score": 19.0,
+      "llm_written": false,
+      "narrative": "Storm a service \u2014 exposed daemons with known holes. Start at 198.51.100.7:6379/tcp: Unauth Redis is often RCE via module load or cron write. High value.",
+      "leads": [
+        "garrison|198.51.100.7:6379/tcp|Redis exposed",
+        "garrison|198.51.100.7:3306/tcp|MySQL exposed",
+        "garrison|198.51.100.7:9200/tcp|Elasticsearch exposed"
+      ]
+    },
+    {
+      "name": "Postern Gates approach",
+      "entry_zone": "postern",
+      "objective": "Takeover",
+      "score": 15.0,
+      "llm_written": false,
+      "narrative": "Slip the side door \u2014 forgotten or mis-scoped hosts. Start at legacy.acme-example.com: CNAME -> acme-old.s3.amazonaws.com (s3.amazonaws.com) but no resolution. Claim the backing resource to serve content from this name.",
+      "leads": [
+        "postern|legacy.acme-example.com|Dangling CNAME \u2014 subdomain takeover",
+        "postern|http://dev-admin.acme-example.com/.git/config|Exposed .git/config",
+        "postern|dev-admin.acme-example.com|Non-prod host live (dev)"
+      ]
+    },
+    {
+      "name": "Curtain Wall approach",
+      "entry_zone": "curtain_wall",
+      "objective": "Foothold",
+      "score": 10.0,
+      "llm_written": false,
+      "narrative": "Get behind the edge \u2014 find origin the CDN/WAF is hiding. Start at 198.51.100.7: Hit these IPs directly with a Host header for the app \u2014 you bypass the WAF/CDN entirely.",
+      "leads": [
+        "curtain_wall|198.51.100.7|Origin reachable beside the CDN"
+      ]
+    },
+    {
+      "name": "Armory approach",
+      "entry_zone": "armory",
+      "objective": "Data",
+      "score": 9.0,
+      "llm_written": false,
+      "narrative": "Break the crypto \u2014 downgrade, decrypt, or impersonate. Start at 198.51.100.7:443/tcp: Downgrade/MITM candidate; pair with a network position. Also a compliance flag.",
+      "leads": [
+        "armory|198.51.100.7:443/tcp|Obsolete TLS offered: TLSV1.0"
+      ]
+    },
+    {
+      "name": "Gatehouse approach",
+      "entry_zone": "gatehouse",
+      "objective": "Creds",
+      "score": 6.5,
+      "llm_written": false,
+      "narrative": "Attack the locks \u2014 auth surfaces to spray, bypass or abuse. Start at vpn.acme-example.com: Fingerprint the login; check MFA, lockout, default creds, and known bypasses for the product.",
+      "leads": [
+        "gatehouse|vpn.acme-example.com|Auth surface exposed (vpn)",
+        "gatehouse|198.51.100.7:22/tcp|SSH exposed"
+      ]
+    },
+    {
+      "name": "Sally Port approach",
+      "entry_zone": "sallyport",
+      "objective": "Recon",
+      "score": 3.0,
+      "llm_written": false,
+      "narrative": "Turn their own gates \u2014 SSRF, callbacks, redirects reaching inward. Start at https://www.acme-example.com/redirect?url=: Confirmed by nuclei \u2014 validate and weaponise per template.",
+      "leads": [
+        "sallyport|https://www.acme-example.com/redirect?url=|Open Redirect"
+      ]
+    },
+    {
+      "name": "Scout's Report approach",
+      "entry_zone": "scouts_report",
+      "objective": "Recon",
+      "score": 1.0,
+      "llm_written": false,
+      "narrative": "Ground intelligence \u2014 leaks, exposure, prior compromise. Start at 198.51.100.7: Recorded Future flags this asset \u2014 pivot on the rules cited; it may already be compromised infrastructure.",
+      "leads": [
+        "scouts_report|198.51.100.7|External risk intel (score 72)"
+      ]
+    }
+  ],
+  "leads": [
+    {
+      "zone": "garrison",
+      "title": "Redis exposed",
+      "asset": "198.51.100.7:6379/tcp",
+      "impact": "RCE",
+      "exploitability": "Likely",
+      "priority": 18.0,
+      "move": "Unauth Redis is often RCE via module load or cron write. High value.",
+      "detail": "Redis exposed on 198.51.100.7:6379/tcp \u2014 Redis 5.0.7",
+      "confidence": "reported",
+      "source": "castle",
+      "refs": [],
+      "fingerprint": "garrison|198.51.100.7:6379/tcp|Redis exposed"
+    },
+    {
+      "zone": "postern",
+      "title": "Dangling CNAME \u2014 subdomain takeover",
+      "asset": "legacy.acme-example.com",
+      "impact": "Takeover",
+      "exploitability": "Likely",
+      "priority": 14.0,
+      "move": "CNAME -> acme-old.s3.amazonaws.com (s3.amazonaws.com) but no resolution. Claim the backing resource to serve content from this name.",
+      "detail": "",
+      "confidence": "reported",
+      "source": "castle",
+      "refs": [],
+      "fingerprint": "postern|legacy.acme-example.com|Dangling CNAME \u2014 subdomain takeover"
+    },
+    {
+      "zone": "curtain_wall",
+      "title": "Origin reachable beside the CDN",
+      "asset": "198.51.100.7",
+      "impact": "Foothold",
+      "exploitability": "Likely",
+      "priority": 10.0,
+      "move": "Hit these IPs directly with a Host header for the app \u2014 you bypass the WAF/CDN entirely.",
+      "detail": "1 web address(es) sit outside the Cloudflare edge.",
+      "confidence": "reported",
+      "source": "castle",
+      "refs": [],
+      "fingerprint": "curtain_wall|198.51.100.7|Origin reachable beside the CDN"
+    },
+    {
+      "zone": "armory",
+      "title": "Obsolete TLS offered: TLSV1.0",
+      "asset": "198.51.100.7:443/tcp",
+      "impact": "Data",
+      "exploitability": "Confirmed",
+      "priority": 9.0,
+      "move": "Downgrade/MITM candidate; pair with a network position. Also a compliance flag.",
+      "detail": "",
+      "confidence": "observed",
+      "source": "castle",
+      "refs": [],
+      "fingerprint": "armory|198.51.100.7:443/tcp|Obsolete TLS offered: TLSV1.0"
+    },
+    {
+      "zone": "postern",
+      "title": "Exposed .git/config",
+      "asset": "http://dev-admin.acme-example.com/.git/config",
+      "impact": "Data",
+      "exploitability": "Confirmed",
+      "priority": 9.0,
+      "move": "Confirmed by nuclei \u2014 validate and weaponise per template.",
+      "detail": "template git-config [medium]",
+      "confidence": "observed",
+      "source": "nuclei",
+      "refs": [],
+      "fingerprint": "postern|http://dev-admin.acme-example.com/.git/config|Exposed .git/config"
+    },
+    {
+      "zone": "garrison",
+      "title": "MySQL exposed",
+      "asset": "198.51.100.7:3306/tcp",
+      "impact": "Data",
+      "exploitability": "Likely",
+      "priority": 6.0,
+      "move": "Try default/empty root; enumerate if reachable \u2014 likely misconfig.",
+      "detail": "MySQL exposed on 198.51.100.7:3306/tcp \u2014 MySQL 5.7.31",
+      "confidence": "reported",
+      "source": "castle",
+      "refs": [],
+      "fingerprint": "garrison|198.51.100.7:3306/tcp|MySQL exposed"
+    },
+    {
+      "zone": "garrison",
+      "title": "Elasticsearch exposed",
+      "asset": "198.51.100.7:9200/tcp",
+      "impact": "Data",
+      "exploitability": "Likely",
+      "priority": 6.0,
+      "move": "Unauth ES usually dumps every index. Check _cat/indices.",
+      "detail": "Elasticsearch exposed on 198.51.100.7:9200/tcp \u2014 Elasticsearch 6.8.0",
+      "confidence": "reported",
+      "source": "castle",
+      "refs": [],
+      "fingerprint": "garrison|198.51.100.7:9200/tcp|Elasticsearch exposed"
+    },
+    {
+      "zone": "gatehouse",
+      "title": "Auth surface exposed (vpn)",
+      "asset": "vpn.acme-example.com",
+      "impact": "Creds",
+      "exploitability": "Possible",
+      "priority": 6.0,
+      "move": "Fingerprint the login; check MFA, lockout, default creds, and known bypasses for the product.",
+      "detail": "",
+      "confidence": "reported",
+      "source": "castle",
+      "refs": [],
+      "fingerprint": "gatehouse|vpn.acme-example.com|Auth surface exposed (vpn)"
+    },
+    {
+      "zone": "gatehouse",
+      "title": "SSH exposed",
+      "asset": "198.51.100.7:22/tcp",
+      "impact": "Foothold",
+      "exploitability": "Possible",
+      "priority": 5.0,
+      "move": "Note version for known bugs; key/credential spray if in scope.",
+      "detail": "SSH exposed on 198.51.100.7:22/tcp \u2014 OpenSSH 7.4",
+      "confidence": "reported",
+      "source": "castle",
+      "refs": [],
+      "fingerprint": "gatehouse|198.51.100.7:22/tcp|SSH exposed"
+    },
+    {
+      "zone": "keep",
+      "title": "Dense service concentration",
+      "asset": "198.51.100.7",
+      "impact": "Foothold",
+      "exploitability": "Possible",
+      "priority": 5.0,
+      "move": "6 services on one host (ACME Hosting). One compromise reaches them all \u2014 high-value single target.",
+      "detail": "",
+      "confidence": "corroborated",
+      "source": "castle",
+      "refs": [],
+      "fingerprint": "keep|198.51.100.7|Dense service concentration"
+    },
+    {
+      "zone": "postern",
+      "title": "Non-prod host live (dev)",
+      "asset": "dev-admin.acme-example.com",
+      "impact": "Foothold",
+      "exploitability": "Possible",
+      "priority": 5.0,
+      "move": "Non-prod is where controls are thin \u2014 debug on, stale builds, weaker auth, test creds. Prioritise.",
+      "detail": "",
+      "confidence": "reported",
+      "source": "castle",
+      "refs": [],
+      "fingerprint": "postern|dev-admin.acme-example.com|Non-prod host live (dev)"
+    },
+    {
+      "zone": "sallyport",
+      "title": "Open Redirect",
+      "asset": "https://www.acme-example.com/redirect?url=",
+      "impact": "Recon",
+      "exploitability": "Confirmed",
+      "priority": 3.0,
+      "move": "Confirmed by nuclei \u2014 validate and weaponise per template.",
+      "detail": "template open-redirect [low]",
+      "confidence": "observed",
+      "source": "nuclei",
+      "refs": [],
+      "fingerprint": "sallyport|https://www.acme-example.com/redirect?url=|Open Redirect"
+    },
+    {
+      "zone": "banners",
+      "title": "Precise versions disclosed",
+      "asset": "acme-example.com",
+      "impact": "Recon",
+      "exploitability": "Likely",
+      "priority": 2.0,
+      "move": "Map each version to public CVEs/exploits before touching the host \u2014 free target selection.",
+      "detail": "6 service(s) advertise exact versions: Elasticsearch 6.8.0, Jetty 9.4.30, MySQL 5.7.31, OpenSSH 7.4, Redis 5.0.7, nginx 1.18.0",
+      "confidence": "reported",
+      "source": "castle",
+      "refs": [],
+      "fingerprint": "banners|acme-example.com|Precise versions disclosed"
+    },
+    {
+      "zone": "scouts_report",
+      "title": "External risk intel (score 72)",
+      "asset": "198.51.100.7",
+      "impact": "Recon",
+      "exploitability": "Possible",
+      "priority": 1.0,
+      "move": "Recorded Future flags this asset \u2014 pivot on the rules cited; it may already be compromised infrastructure.",
+      "detail": "Recent Botnet C2; Historical Malware",
+      "confidence": "corroborated",
+      "source": "castle",
+      "refs": [],
+      "fingerprint": "scouts_report|198.51.100.7|External risk intel (score 72)"
+    }
+  ],
+  "llm_synthesis": {
+    "summary": "Skip the CDN: origin 198.51.100.7 is directly reachable and runs unauthenticated Redis (6379) beside a legacy-TLS listener. Fastest path to RCE. In parallel, dev-admin's exposed .git likely yields source and secrets; legacy.acme-example.com is a clean S3 subdomain takeover.",
+    "avenues": [
+      {
+        "name": "Source disclosure via exposed .git",
+        "objective": "Creds",
+        "steps": [
+          "postern|http://dev-admin.acme-example.com/.git/config|Exposed .git/config",
+          "garrison|198.51.100.7:6379/tcp|Redis exposed"
+        ],
+        "narrative": "dev-admin leaks .git/config \u2014 pull the repo, mine history for secrets, then pivot to the origin's Redis."
+      }
+    ],
+    "chains": [
+      {
+        "hypothesis": "Reach the origin, then take the unauth Redis to RCE",
+        "steps": [
+          "curtain_wall|198.51.100.7|Origin reachable beside the CDN",
+          "garrison|198.51.100.7:6379/tcp|Redis exposed"
+        ],
+        "rationale": "Origin is reachable beside the CDN, and 6379 answers there \u2014 module-load or cron-write gets code exec."
+      }
+    ],
+    "model": "qwen2.5:32b (simulated)"
+  },
+  "drift": {},
+  "assets": [
+    {
+      "kind": "host",
+      "key": "www.acme-example.com",
+      "attrs": {
+        "resolves": true,
+        "ips": [
+          "104.16.10.10"
+        ]
+      },
+      "sources": [
+        "crtsh"
+      ],
+      "confidence": "reported",
+      "cluster": null,
+      "anomaly_score": null
+    },
+    {
+      "kind": "ip",
+      "key": "104.16.10.10",
+      "attrs": {
+        "org": "Cloudflare, Inc.",
+        "isp": "Cloudflare"
+      },
+      "sources": [
+        "shodan"
+      ],
+      "confidence": "reported",
+      "cluster": -1,
+      "anomaly_score": null
+    },
+    {
+      "kind": "service",
+      "key": "104.16.10.10:443/tcp",
+      "attrs": {
+        "ip": "104.16.10.10",
+        "port": 443,
+        "product": "cloudflare"
+      },
+      "sources": [
+        "shodan"
+      ],
+      "confidence": "reported",
+      "cluster": null,
+      "anomaly_score": null
+    },
+    {
+      "kind": "ip",
+      "key": "198.51.100.7",
+      "attrs": {
+        "org": "ACME Hosting",
+        "isp": "ACME",
+        "rf_score": 72,
+        "rf_rules": [
+          "Recent Botnet C2",
+          "Historical Malware"
+        ]
+      },
+      "sources": [
+        "censys",
+        "recordedfuture"
+      ],
+      "confidence": "corroborated",
+      "cluster": -1,
+      "anomaly_score": null
+    },
+    {
+      "kind": "service",
+      "key": "198.51.100.7:443/tcp",
+      "attrs": {
+        "ip": "198.51.100.7",
+        "port": 443,
+        "product": "nginx",
+        "version": "1.18.0",
+        "tls_versions": [
+          "TLSv1.0",
+          "TLSv1.2"
+        ],
+        "tls_obsolete": [
+          "TLSv1.0"
+        ]
+      },
+      "sources": [
+        "active:tlsprobe",
+        "shodan"
+      ],
+      "confidence": "observed",
+      "cluster": null,
+      "anomaly_score": null
+    },
+    {
+      "kind": "service",
+      "key": "198.51.100.7:22/tcp",
+      "attrs": {
+        "ip": "198.51.100.7",
+        "port": 22,
+        "product": "OpenSSH",
+        "version": "7.4"
+      },
+      "sources": [
+        "shodan"
+      ],
+      "confidence": "reported",
+      "cluster": null,
+      "anomaly_score": null
+    },
+    {
+      "kind": "service",
+      "key": "198.51.100.7:3306/tcp",
+      "attrs": {
+        "ip": "198.51.100.7",
+        "port": 3306,
+        "product": "MySQL",
+        "version": "5.7.31"
+      },
+      "sources": [
+        "shodan"
+      ],
+      "confidence": "reported",
+      "cluster": null,
+      "anomaly_score": null
+    },
+    {
+      "kind": "service",
+      "key": "198.51.100.7:6379/tcp",
+      "attrs": {
+        "ip": "198.51.100.7",
+        "port": 6379,
+        "product": "Redis",
+        "version": "5.0.7"
+      },
+      "sources": [
+        "shodan"
+      ],
+      "confidence": "reported",
+      "cluster": null,
+      "anomaly_score": null
+    },
+    {
+      "kind": "service",
+      "key": "198.51.100.7:9200/tcp",
+      "attrs": {
+        "ip": "198.51.100.7",
+        "port": 9200,
+        "product": "Elasticsearch",
+        "version": "6.8.0"
+      },
+      "sources": [
+        "shodan"
+      ],
+      "confidence": "reported",
+      "cluster": null,
+      "anomaly_score": null
+    },
+    {
+      "kind": "service",
+      "key": "198.51.100.7:8080/tcp",
+      "attrs": {
+        "ip": "198.51.100.7",
+        "port": 8080,
+        "product": "Jetty",
+        "version": "9.4.30"
+      },
+      "sources": [
+        "shodan"
+      ],
+      "confidence": "reported",
+      "cluster": null,
+      "anomaly_score": null
+    },
+    {
+      "kind": "host",
+      "key": "vpn.acme-example.com",
+      "attrs": {
+        "resolves": true,
+        "ips": [
+          "198.51.100.9"
+        ]
+      },
+      "sources": [
+        "crtsh"
+      ],
+      "confidence": "reported",
+      "cluster": null,
+      "anomaly_score": null
+    },
+    {
+      "kind": "ip",
+      "key": "198.51.100.9",
+      "attrs": {
+        "org": "ACME Hosting"
+      },
+      "sources": [
+        "dns"
+      ],
+      "confidence": "reported",
+      "cluster": -1,
+      "anomaly_score": null
+    },
+    {
+      "kind": "host",
+      "key": "dev-admin.acme-example.com",
+      "attrs": {
+        "resolves": true,
+        "ips": [
+          "198.51.100.7"
+        ]
+      },
+      "sources": [
+        "crtsh"
+      ],
+      "confidence": "reported",
+      "cluster": null,
+      "anomaly_score": null
+    },
+    {
+      "kind": "host",
+      "key": "legacy.acme-example.com",
+      "attrs": {
+        "resolves": false,
+        "cname": "acme-old.s3.amazonaws.com"
+      },
+      "sources": [
+        "crtsh"
+      ],
+      "confidence": "reported",
+      "cluster": null,
+      "anomaly_score": null
+    },
+    {
+      "kind": "endpoint",
+      "key": "http://dev-admin.acme-example.com/.git/config",
+      "attrs": {
+        "nuclei_template": "git-config",
+        "nuclei_name": "Exposed .git/config",
+        "nuclei_severity": "medium",
+        "nuclei_tags": [
+          "exposure",
+          "config"
+        ],
+        "matched_at": "http://dev-admin.acme-example.com/.git/config"
+      },
+      "sources": [
+        "active:nuclei"
+      ],
+      "confidence": "observed",
+      "cluster": null,
+      "anomaly_score": null
+    },
+    {
+      "kind": "endpoint",
+      "key": "https://www.acme-example.com/redirect",
+      "attrs": {
+        "nuclei_template": "open-redirect",
+        "nuclei_name": "Open Redirect",
+        "nuclei_severity": "low",
+        "nuclei_tags": [
+          "redirect"
+        ],
+        "matched_at": "https://www.acme-example.com/redirect?url="
+      },
+      "sources": [
+        "active:nuclei"
+      ],
+      "confidence": "observed",
+      "cluster": null,
+      "anomaly_score": null
+    }
+  ]
+}

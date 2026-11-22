@@ -1,0 +1,10 @@
+# Bastion scope file — authorised targets only.
+# One entry per line. '#' starts a comment. '!' marks an out-of-scope exclusion.
+# Wildcards match hostnames; CIDRs and bare IPs are matched by address.
+
+*.example.com
+example.com
+203.0.113.0/24
+
+!admin.example.com       # sensitive — do not touch
+!203.0.113.5             # shared host, out of scope

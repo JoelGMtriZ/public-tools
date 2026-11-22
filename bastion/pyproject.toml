@@ -1,0 +1,17 @@
+[project]
+name = "bastion"
+version = "0.2.0"
+description = "Offensive reconnaissance mapper — the scout that maps the castle"
+requires-python = ">=3.10"
+dependencies = ["httpx>=0.27", "dnspython>=2.6"]
+
+[project.optional-dependencies]
+ml = ["scikit-learn>=1.3", "numpy>=1.24"]
+all = ["scikit-learn>=1.3", "numpy>=1.24"]
+
+[project.scripts]
+bastion = "bastion.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

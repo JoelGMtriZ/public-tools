@@ -1,0 +1,80 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bastion — acme-example.com</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500&family=Spectral:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#12161d;--panel:#0d1117;--line:#2a3340;--ink:#d4d9e0;--dim:#8592a3;}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);
+font-family:"Spectral",Georgia,serif;line-height:1.6}
+.sheet{max-width:1140px;margin:0 auto;padding:52px 26px 90px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.22em;
+text-transform:uppercase;color:var(--dim);margin:0 0 12px}
+h1{font-family:"Bodoni Moda",Didot,serif;font-weight:500;font-size:clamp(34px,6vw,60px);
+margin:0 0 8px;letter-spacing:-.015em}
+h1 .q{display:block;font-size:.4em;font-style:italic;color:var(--dim);margin-top:12px;font-weight:400}
+.meta{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--dim);
+display:flex;flex-wrap:wrap;gap:6px 26px;margin-top:18px}
+h2{font-family:"Bodoni Moda",Didot,serif;font-weight:500;font-size:27px;margin:0 0 6px}
+.section{margin-top:64px}
+.note{color:var(--dim);font-style:italic;font-size:14px;margin:0 0 22px;max-width:64ch}
+.top{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:40px;
+align-items:start;margin-top:38px}
+.plan{width:100%;height:auto}
+.plan .wall{fill:none;stroke-width:3.5;stroke-linejoin:miter}
+.plan .moat{fill:none;stroke:#2a3340;stroke-width:1.3;stroke-dasharray:2 7;opacity:.6}
+.plan .assault{stroke:#c65b4e;stroke-width:2;opacity:.9}
+.plan text{font-family:"JetBrains Mono",monospace;fill:var(--ink)}
+.plan .zl{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase}
+.plan .zc{font-size:10px;fill:var(--dim)}
+.plan .kn{font-size:10px;letter-spacing:.16em;fill:var(--dim)}
+.verdict{border:1px solid var(--line);background:var(--panel);padding:26px}
+.headline{font-size:17px;margin:0 0 18px}
+.tally{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.tally li{display:flex;justify-content:space-between;padding:8px 0;
+border-bottom:1px solid rgba(42,51,64,.5);font-family:"JetBrains Mono",monospace;font-size:12.5px}
+.av{border-left:3px solid var(--line);padding:2px 0 2px 20px;margin:0 0 22px}
+.av h3{font-family:"Spectral",serif;font-size:17px;margin:0 0 5px}
+.av .obj{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.12em;
+text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.av p{margin:0;color:var(--dim);font-size:14px}
+.av.llm{border-left-color:#b07cc6}
+.lead{display:grid;grid-template-columns:64px 1fr;gap:14px;padding:14px 0;
+border-bottom:1px solid rgba(42,51,64,.45)}
+.pri{font-family:"JetBrains Mono",monospace;font-size:20px;text-align:right;color:var(--dim)}
+.lead h4{font-family:"Spectral",serif;font-size:16px;font-weight:600;margin:0 0 4px}
+.tags{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.08em;
+text-transform:uppercase;color:var(--dim);margin-bottom:6px;display:flex;gap:14px;flex-wrap:wrap}
+.lead .asset{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink)}
+.move{color:var(--dim);font-size:13.5px;margin-top:6px}
+.move::before{content:"↳ ";color:#7d8ba0}
+.refs{font-family:"JetBrains Mono",monospace;font-size:11px;color:#cf9648}
+.summary{border:1px solid #4a3a5c;background:rgba(176,124,198,.06);padding:22px;
+font-size:15px}
+.foot{margin-top:72px;padding-top:22px;border-top:1px solid var(--line);
+font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--dim);line-height:1.9}
+@media(max-width:840px){.top{grid-template-columns:1fr}}
+</style></head><body><div class="sheet">
+<p class="eyebrow">Bastion · scout's report · active · grey-box</p>
+<h1>acme-example.com<span class="q">The works, the weak points, and the way in</span></h1>
+<div class="meta"><span>22 November 2026, 04:05 UTC</span>
+<span>4 names · 3 live</span>
+<span>3 addresses · 7 services</span>
+<span>14 leads</span><span>42.7s</span></div>
+<section class="top"><svg class="plan" viewBox="0 0 840 760" role="img" aria-label="Attack map of acme-example.com"><circle class="moat" cx="420.0" cy="370.0" r="240"/><path class="wall" d="M315.0 188.1 L332.0 217.6 L508.0 217.6 L525.0 188.1" stroke="#cf9648" stroke-dasharray="16 10"/><text class="zl" x="420" y="74" text-anchor="middle">Curtain Wall</text><text class="zc" x="420" y="89" text-anchor="middle">1 lead · Foothold</text><path class="wall" d="M525.0 188.1 L508.0 217.6 L596.0 370.0 L630.0 370.0" stroke="#cf9648" stroke-dasharray="20 6"/><text class="zl" x="674" y="217" text-anchor="start">Gatehouse</text><text class="zc" x="674" y="232" text-anchor="start">2 leads · Creds</text><path class="wall" d="M630.0 370.0 L596.0 370.0 L508.0 522.4 L525.0 551.9" stroke="#6f97c4" stroke-dasharray="17 9"/><text class="zl" x="674" y="513" text-anchor="start">Armory</text><text class="zc" x="674" y="528" text-anchor="start">1 lead · Data</text><path class="wall" d="M525.0 551.9 L508.0 522.4 L332.0 522.4 L315.0 551.9" stroke="#c65b4e" stroke-dasharray="8 18"/><text class="zl" x="420" y="674" text-anchor="middle">Garrison</text><text class="zc" x="420" y="689" text-anchor="middle">3 leads · RCE</text><path class="wall" d="M315.0 551.9 L332.0 522.4 L244.0 370.0 L210.0 370.0" stroke="#7d8ba0" stroke-dasharray="24 2"/><text class="zl" x="166" y="531" text-anchor="end">Banners</text><text class="zc" x="166" y="546" text-anchor="end">1 lead · Recon</text><path class="wall" d="M210.0 370.0 L244.0 370.0 L332.0 217.6 L315.0 188.1" stroke="#c65b4e" stroke-dasharray="12 14"/><text class="zl" x="166" y="227" text-anchor="end">Postern Gates</text><text class="zc" x="166" y="242" text-anchor="end">3 leads · Takeover</text><line class="assault" x1="145" y1="211" x2="264" y2="280"/><line class="assault" x1="264" y1="280" x2="276" y2="281"/><line class="assault" x1="264" y1="280" x2="271" y2="290"/><line class="assault" x1="420" y1="688" x2="420" y2="550"/><line class="assault" x1="420" y1="550" x2="415" y2="539"/><line class="assault" x1="420" y1="550" x2="425" y2="539"/><line class="assault" x1="145" y1="211" x2="264" y2="280"/><line class="assault" x1="264" y1="280" x2="276" y2="281"/><line class="assault" x1="264" y1="280" x2="271" y2="290"/><line class="assault" x1="420" y1="52" x2="420" y2="190"/><line class="assault" x1="420" y1="190" x2="425" y2="201"/><line class="assault" x1="420" y1="190" x2="415" y2="201"/><path d="M420 320 L463 345 L463 395 L420 420 L377 395 L377 345 Z" fill="rgba(255,255,255,.03)" stroke="#cf9648" stroke-width="2"/><text class="kn" x="420" y="368" text-anchor="middle">THE KEEP</text><text class="zc" x="420" y="384" text-anchor="middle">the objective</text></svg>
+<div class="verdict"><p class="headline">14 leads across 9 zones; 3 confirmed. Best: Redis exposed (RCE/Likely).</p>
+<ul class="tally"><li><span>RCE</span><span>1</span></li><li><span>Takeover</span><span>1</span></li><li><span>Creds</span><span>1</span></li><li><span>Foothold</span><span>4</span></li><li><span>Data</span><span>4</span></li><li><span>Recon</span><span>3</span></li></ul></div></section>
+<section class="section"><h2>Avenues of approach</h2>
+<p class="note">Ranked routes in. Wall colour on the plan is the best impact
+reachable at each zone; breaches mark where the wall is open; arrows are the
+assault routes below. ✦ marks routes the local model proposed.</p>
+<div class="av llm"><div class="obj">1 · route to Creds · score 18.5 · ✦ synthesised</div><h3>Source disclosure via exposed .git</h3><p>dev-admin leaks .git/config — pull the repo, mine history for secrets, then pivot to the origin&#x27;s Redis.</p></div><div class="av"><div class="obj">2 · route to RCE · score 19.0</div><h3>Garrison approach</h3><p>Storm a service — exposed daemons with known holes. Start at 198.51.100.7:6379/tcp: Unauth Redis is often RCE via module load or cron write. High value.</p></div><div class="av"><div class="obj">3 · route to Takeover · score 15.0</div><h3>Postern Gates approach</h3><p>Slip the side door — forgotten or mis-scoped hosts. Start at legacy.acme-example.com: CNAME -&gt; acme-old.s3.amazonaws.com (s3.amazonaws.com) but no resolution. Claim the backing resource to serve content from this name.</p></div><div class="av"><div class="obj">4 · route to Foothold · score 10.0</div><h3>Curtain Wall approach</h3><p>Get behind the edge — find origin the CDN/WAF is hiding. Start at 198.51.100.7: Hit these IPs directly with a Host header for the app — you bypass the WAF/CDN entirely.</p></div><div class="av"><div class="obj">5 · route to Data · score 9.0</div><h3>Armory approach</h3><p>Break the crypto — downgrade, decrypt, or impersonate. Start at 198.51.100.7:443/tcp: Downgrade/MITM candidate; pair with a network position. Also a compliance flag.</p></div><div class="av"><div class="obj">6 · route to Creds · score 6.5</div><h3>Gatehouse approach</h3><p>Attack the locks — auth surfaces to spray, bypass or abuse. Start at vpn.acme-example.com: Fingerprint the login; check MFA, lockout, default creds, and known bypasses for the product.</p></div><div class="av"><div class="obj">7 · route to Recon · score 3.0</div><h3>Sally Port approach</h3><p>Turn their own gates — SSRF, callbacks, redirects reaching inward. Start at https://www.acme-example.com/redirect?url=: Confirmed by nuclei — validate and weaponise per template.</p></div><div class="av"><div class="obj">8 · route to Recon · score 1.0</div><h3>Scout&#x27;s Report approach</h3><p>Ground intelligence — leaks, exposure, prior compromise. Start at 198.51.100.7: Recorded Future flags this asset — pivot on the rules cited; it may already be compromised infrastructure.</p></div></section>
+<section class="section"><h2>Scout's summary</h2><div class="summary">Skip the CDN: origin 198.51.100.7 is directly reachable and runs unauthenticated Redis (6379) beside a legacy-TLS listener. Fastest path to RCE. In parallel, dev-admin&#x27;s exposed .git likely yields source and secrets; legacy.acme-example.com is a clean S3 subdomain takeover.<div class="note" style="margin-top:12px">Synthesised by qwen2.5:32b (simulated); grounded in the leads above.</div></div></section>
+<section class="section"><h2>Leads</h2>
+<p class="note">Ranked by impact × exploitability. Every lead carries the next
+move and a confidence — passive intel is often stale, and a reported lead is a
+lead, not a fact.</p><div class="lead"><div class="pri">18</div><div><div class="tags"><span>RCE/Likely</span><span>Garrison</span><span>reported</span></div><h4>Redis exposed</h4><div class="asset">198.51.100.7:6379/tcp</div><div class=move>Unauth Redis is often RCE via module load or cron write. High value.</div></div></div><div class="lead"><div class="pri">14</div><div><div class="tags"><span>Takeover/Likely</span><span>Postern Gates</span><span>reported</span></div><h4>Dangling CNAME — subdomain takeover</h4><div class="asset">legacy.acme-example.com</div><div class=move>CNAME -&gt; acme-old.s3.amazonaws.com (s3.amazonaws.com) but no resolution. Claim the backing resource to serve content from this name.</div></div></div><div class="lead"><div class="pri">10</div><div><div class="tags"><span>Foothold/Likely</span><span>Curtain Wall</span><span>reported</span></div><h4>Origin reachable beside the CDN</h4><div class="asset">198.51.100.7</div><div class=move>Hit these IPs directly with a Host header for the app — you bypass the WAF/CDN entirely.</div></div></div><div class="lead"><div class="pri">9</div><div><div class="tags"><span>Data/Confirmed</span><span>Armory</span><span>observed</span></div><h4>Obsolete TLS offered: TLSV1.0</h4><div class="asset">198.51.100.7:443/tcp</div><div class=move>Downgrade/MITM candidate; pair with a network position. Also a compliance flag.</div></div></div><div class="lead"><div class="pri">9</div><div><div class="tags"><span>Data/Confirmed</span><span>Postern Gates</span><span>observed</span></div><h4>Exposed .git/config</h4><div class="asset">http://dev-admin.acme-example.com/.git/config</div><div class=move>Confirmed by nuclei — validate and weaponise per template.</div></div></div><div class="lead"><div class="pri">6</div><div><div class="tags"><span>Data/Likely</span><span>Garrison</span><span>reported</span></div><h4>MySQL exposed</h4><div class="asset">198.51.100.7:3306/tcp</div><div class=move>Try default/empty root; enumerate if reachable — likely misconfig.</div></div></div><div class="lead"><div class="pri">6</div><div><div class="tags"><span>Data/Likely</span><span>Garrison</span><span>reported</span></div><h4>Elasticsearch exposed</h4><div class="asset">198.51.100.7:9200/tcp</div><div class=move>Unauth ES usually dumps every index. Check _cat/indices.</div></div></div><div class="lead"><div class="pri">6</div><div><div class="tags"><span>Creds/Possible</span><span>Gatehouse</span><span>reported</span></div><h4>Auth surface exposed (vpn)</h4><div class="asset">vpn.acme-example.com</div><div class=move>Fingerprint the login; check MFA, lockout, default creds, and known bypasses for the product.</div></div></div><div class="lead"><div class="pri">5</div><div><div class="tags"><span>Foothold/Possible</span><span>Gatehouse</span><span>reported</span></div><h4>SSH exposed</h4><div class="asset">198.51.100.7:22/tcp</div><div class=move>Note version for known bugs; key/credential spray if in scope.</div></div></div><div class="lead"><div class="pri">5</div><div><div class="tags"><span>Foothold/Possible</span><span>The Keep</span><span>corroborated</span></div><h4>Dense service concentration</h4><div class="asset">198.51.100.7</div><div class=move>6 services on one host (ACME Hosting). One compromise reaches them all — high-value single target.</div></div></div><div class="lead"><div class="pri">5</div><div><div class="tags"><span>Foothold/Possible</span><span>Postern Gates</span><span>reported</span></div><h4>Non-prod host live (dev)</h4><div class="asset">dev-admin.acme-example.com</div><div class=move>Non-prod is where controls are thin — debug on, stale builds, weaker auth, test creds. Prioritise.</div></div></div><div class="lead"><div class="pri">3</div><div><div class="tags"><span>Recon/Confirmed</span><span>Sally Port</span><span>observed</span></div><h4>Open Redirect</h4><div class="asset">https://www.acme-example.com/redirect?url=</div><div class=move>Confirmed by nuclei — validate and weaponise per template.</div></div></div><div class="lead"><div class="pri">2</div><div><div class="tags"><span>Recon/Likely</span><span>Banners</span><span>reported</span></div><h4>Precise versions disclosed</h4><div class="asset">acme-example.com</div><div class=move>Map each version to public CVEs/exploits before touching the host — free target selection.</div></div></div><div class="lead"><div class="pri">1</div><div><div class="tags"><span>Recon/Possible</span><span>Scout&#x27;s Report</span><span>corroborated</span></div><h4>External risk intel (score 72)</h4><div class="asset">198.51.100.7</div><div class=move>Recorded Future flags this asset — pivot on the rules cited; it may already be compromised infrastructure.</div></div></div></section>
+<footer class="foot"><div>Sources: crtsh, shodan, censys, dns, active:tlsprobe, active:nuclei, recordedfuture</div>
+<div>active · grey-box. Authorised engagement use only.</div></footer>
+</div></body></html>
